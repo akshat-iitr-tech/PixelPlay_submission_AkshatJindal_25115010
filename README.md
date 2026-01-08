@@ -24,6 +24,14 @@ The system is designed with a strong focus on:
 
 ---
 
+## Some of the results of my model:
+![frame_00507](https://github.com/user-attachments/assets/6c4aba8d-b97f-442b-ac2b-ff7bac4a3e9b)
+![frame_00003](https://github.com/user-attachments/assets/6486a8da-84ca-4280-b3ee-86fc3d5f97ef)
+
+
+<img width="2933" height="742" alt="pixel_heatmaps_video06_overlay" src="https://github.com/user-attachments/assets/637cf387-6595-451c-a9d3-48f4774e05c3" />
+This shows the heatmap for video 06. This also depicts that the model excels at identifying anomalous objects like bags.
+
 ## 🧠 High-Level Pipeline
 
 Video Frames  
