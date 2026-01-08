@@ -1,122 +1,159 @@
-# PixelPlay_submission_AkshatJindal_25115010
-My submission for VLG PixelPlay 26. Akshat Jindal 25115010
-
 🎥 Video Anomaly Detection on Avenue Dataset
 
 Unsupervised Spatiotemporal Anomaly Detection using I3D
 
 Author: Akshat Jindal
 Challenge: VLG Recruitment Challenge ’26
+Repository: PixelPlay_submission_AkshatJindal_25115010
 
-📌 Project Summary
+📌 Overview
 
-This project implements a high-accuracy, unsupervised Video Anomaly Detection (VAD) system for surveillance videos using the Avenue Dataset.
+This project presents a high-performance, unsupervised Video Anomaly Detection (VAD) system for surveillance footage using the Avenue Dataset.
 
-The core idea is to:
+The core principle is simple and effective:
 
-Learn normal motion patterns using spatiotemporal features and detect deviations as anomalies.
+Learn normal spatiotemporal behavior from video → detect deviations as anomalies
 
-The system is optimized for robustness, speed, and competition-ready evaluation.
+The system is designed with a strong focus on:
 
-🧠 Core Architecture
-1️⃣ Spatiotemporal Feature Extraction (I3D)
+True motion modeling
+
+Robust handling of dataset artifacts
+
+Efficient, competition-ready inference
+
+🧠 High-Level Pipeline
+Video Frames
+     ↓
+Dataset-Aware Preprocessing
+     ↓
+16-Frame Clip Construction
+     ↓
+I3D Feature Extraction (2048-D)
+     ↓
+Unsupervised Normalcy Modeling (AE / k-NN)
+     ↓
+Temporal Aggregation & Smoothing
+     ↓
+Frame-Level Anomaly Score (0–1)
+
+⚙️ Key Implementation Details (Core Strengths)
+
+1️⃣ Dataset-Aware Preprocessing (Critical)
+
+The Avenue dataset contains intentional test-time corruption that can severely degrade VAD performance if ignored.
+
+This implementation explicitly addresses them.
+
+✔ Inversion Detection & Correction (Test Set Only)
+
+Detected using:
+
+Brightness comparison (top vs bottom regions)
+
+HSV-based grass / pavement heuristics
+
+Corrected using vertical flipping (cv2.flip)
+
+📈 ~30% of test frames were auto-corrected, aligning with visual inspection and significantly improving anomaly scores.
+
+✔ Noise & Blur Handling
+
+Fast detection using Laplacian variance
+
+Correction using:
+
+Gaussian blur (fast path)
+
+Non-Local Means denoising (selective)
+
+All corrections are test-only, ensuring the training distribution remains clean.
+
+2️⃣ Spatiotemporal Feature Extraction (I3D)
 
 Backbone: I3D (Inflated 3D ConvNet, ResNet-50 based)
 
 Pretrained on: Kinetics-400
 
-Input: 16-frame clips (B, 3, 16, 224, 224)
+Input: (B, 3, 16, 224, 224)
 
 Output: 2048-D feature vector per clip
 
-Usage: Frozen feature extractor (no fine-tuning)
+Usage: Frozen (feature extractor only)
 
 Why I3D?
 
-Captures motion explicitly using 3D convolutions
+Uses 3D convolutions → captures motion directly
+
+Learns how things move, not just what they look like
 
 Ideal for anomalies like running, throwing, loitering
 
-Far superior to 2D CNNs for video anomaly detection
-
-2️⃣ Normalcy Modeling (Unsupervised)
-🔹 A. Autoencoder-Based Scoring (Primary)
+3️⃣ Normalcy Modeling (Unsupervised)
+🔹 Autoencoder-Based Anomaly Scoring (Primary)
 
 Architecture: Bottleneck MLP Autoencoder
+
 2048 → 1024 → 512 → 128 → 512 → 1024 → 2048
 
-Training: Only on normal videos
 
-Anomaly Score: Reconstruction MSE
+Training: Normal videos only
 
-Regularization: BatchNorm + Dropout + Xavier init
+Loss: Mean Squared Error (MSE)
 
-Key Insight:
-The bottleneck forces the model to learn only normal behavior.
-Anomalies fail to reconstruct → high error.
+Regularization: BatchNorm + Dropout + Xavier Init
 
-🔹 B. FAISS k-NN (Alternative)
+Rationale:
+The bottleneck forces the model to learn only normal motion patterns.
+Anomalies fail to reconstruct → high reconstruction error.
+
+🔹 FAISS k-NN (Alternative)
 
 Stores all normal I3D features in a FAISS index
 
-Anomaly = large distance to nearest neighbors
+Anomaly score = distance to nearest neighbors
 
-No training required
+Zero training time
 
 Extremely fast inference
 
-Both AE and k-NN achieve similar AUC; AE slightly higher, k-NN more robust.
+Aspect	Autoencoder	k-NN
+Training	Required	None
+Memory	Constant	Linear
+Overfitting	Possible	Very robust
+Speed	Fast	Very fast
 
-⚙️ Vital Implementation Details (Key Strengths)
-🔧 Dataset-Specific Preprocessing (Critical)
+Both methods achieve similar AUC; AE is slightly higher, k-NN is more stable.
 
-The Avenue dataset contains intentional corruption in the test set.
+4️⃣ Temporal Scoring & Output
 
-Handled explicitly in this implementation:
+Sliding window with overlap
 
-Upside-down frames (test-only)
+Train stride: 2 (efficiency)
 
-Detected using brightness comparison (top vs bottom)
+Test stride: 1 (fine localization)
 
-HSV-based grass & pavement heuristics
+Frame score = max score from overlapping clips
 
-Corrected using vertical flip
+Gaussian temporal smoothing
 
-Noise & blur
+Global normalization to [0, 1]
 
-Laplacian variance for detection
+✔ Produces frame-level anomaly probability, ready for submission.
 
-Fast Gaussian / NLM denoising
-
-📈 ~30% of test frames were auto-corrected, significantly improving performance.
-
-⚡ High-Performance Pipeline
+🚀 Performance Optimizations
 
 Vectorized ImageNet normalization
 
 Parallel frame loading (ThreadPoolExecutor)
 
-Feature caching (.pt) to decouple I3D from training
+Persistent feature caching (.pt)
 
 AMP-enabled training
 
-Sliding window with stride control
+Fully vectorized scoring & aggregation
 
-Train stride = 2 (efficiency)
-
-Test stride = 1 (fine localization)
-
-📊 Anomaly Scoring & Output
-
-Reconstruction error → clip-level score
-
-Frame-level score = max over overlapping clips
-
-Temporal Gaussian smoothing
-
-Global normalization to [0, 1]
-
-Outputs per-frame anomaly probability (competition-ready)
+These choices eliminate I/O bottlenecks and enable rapid experimentation.
 
 🏗️ Training Configuration
 Component	Value
@@ -126,15 +163,31 @@ Optimizer	AdamW
 Learning Rate	5e-4 (Cosine Annealing)
 Epochs	100
 Hardware	NVIDIA P100 (Kaggle)
+🧪 Additional Experiments
+
+To gain deeper insight, multiple alternative architectures were explored:
+
+I3D + FAISS k-NN
+
+VGG + ConvLSTM Autoencoder
+
+3D CNN + Attention-based AE (from scratch)
+
+ConvLSTM spatiotemporal AE
+
+Key observation:
+
+Feature quality matters more than the anomaly scoring method.
+
 📌 Key Takeaways
 
-Video anomaly detection is fundamentally spatiotemporal
+Video anomaly detection is inherently spatiotemporal
 
-Feature quality matters more than scoring method
+2D CNNs are insufficient for motion-based anomalies
 
 Dataset artifacts can destroy AUC if ignored
 
-Unsupervised methods (AE / k-NN) are highly effective
+Unsupervised methods (AE, k-NN) are highly effective
 
 Engineering decisions matter as much as model choice
 
